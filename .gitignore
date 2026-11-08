@@ -5,7 +5,11 @@ xcuserdata/
 # Build products
 build/
 DerivedData/
+.derivedData/
 *.dSYM
 
 # macOS
 .DS_Store
+
+# TMDB read access token
+Slate/Secrets.plist

@@ -9,12 +9,11 @@ Slate is a native Apple app for a personal watchlist of movies and series.
 The owner tracks:
 
 - titles they want to watch
+- titles they are watching
 - titles they have already watched
 - for a series, the episode where they stopped
 
-The Xcode template (`Item` with a timestamp) is still in the tree. Replace it with the watchlist domain. Do not keep the sample list as the product.
-
-Stay inside that scope until the owner expands it. Do not add catalogs, recommendations, accounts, or sync on your own.
+Titles are added from TMDB search and then stored on device. Do not add recommendations, accounts, or sync. Do not browse the catalog beyond search, season, and episode lookup.
 
 ## Language
 
@@ -37,7 +36,9 @@ Conversation with the owner may be in Portuguese. That language stays in chat. I
 - Marketing version `1.0` (`MARKETING_VERSION`), build `1` (`CURRENT_PROJECT_VERSION`).
 - Development localization: English. User-facing strings go through the String Catalog (`SWIFT_EMIT_LOC_STRINGS` is enabled).
 - Unit tests use Swift Testing in `SlateTests`. UI tests use XCTest in `SlateUITests`.
-- Mac uses `NavigationSplitView`. The other platforms use `NavigationStack`. Keep that split when adding screens.
+- The interface is a dark, poster-first watchlist on every platform, in one `NavigationStack`. Filter chips narrow the grid. Do not bring back a segmented control or a split-view sidebar for the library.
+- The Mac target keeps the App Sandbox and `ENABLE_OUTGOING_NETWORK_CONNECTIONS`. Search and posters need that outgoing client entitlement.
+- The TMDB read access token lives in `Slate/Secrets.plist` under `TMDBReadAccessToken`. That file is gitignored. `Secrets.example.plist` is the committed template. Search must show the TMDB attribution line.
 
 Prefer system controls and SF Symbols. Add a third-party dependency only when the owner asks for it.
 
@@ -73,7 +74,11 @@ the watched flag.
 ## Layout
 
 - `Slate/SlateApp.swift` — app entry and SwiftData container
-- `Slate/ContentView.swift` — template list, still the sample UI
-- `Slate/Item.swift` — template model, still the sample domain
-- `SlateTests/` — unit tests, still the Xcode stub
-- `SlateUITests/` — UI tests, still the Xcode stub
+- `Slate/Title.swift` — watchlist model
+- `Slate/LibraryView.swift` — dark poster grid with All, Watching, Want, and Watched chips
+- `Slate/SearchView.swift` — poster search in a popup. The add button opens it, and the A key does the same when a text field is not focused.
+- On the watchlist, F opens a popup that searches only titles already saved in the selected category.
+- `Slate/TitleDetailView.swift` — status and series progress
+- `Slate/Catalog.swift` — TMDB client and response decoding
+- `SlateTests/` — unit tests, no network
+- `SlateUITests/` — launch UI tests
