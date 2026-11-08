@@ -8,34 +8,42 @@ import SwiftData
 
 @main
 struct SlateApp: App {
-    var sharedModelContainer: ModelContainer = {
+    private let modelContainerResult: Result<ModelContainer, Error>
+
+    init() {
         let schema = Schema([Title.self])
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-
-        if let container = try? ModelContainer(for: schema, configurations: [configuration]) {
-            return container
+        modelContainerResult = Result {
+            try ModelContainer(for: schema, configurations: [configuration])
         }
-
-        // The Xcode template store only held sample items. Drop it and start the watchlist fresh.
-        let storeURL = configuration.url
-        let fileManager = FileManager.default
-        try? fileManager.removeItem(at: storeURL)
-        try? fileManager.removeItem(at: URL(fileURLWithPath: storeURL.path + "-wal"))
-        try? fileManager.removeItem(at: URL(fileURLWithPath: storeURL.path + "-shm"))
-
-        do {
-            return try ModelContainer(for: schema, configurations: [configuration])
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
-        }
-    }()
+    }
 
     var body: some Scene {
         WindowGroup {
-            LibraryView()
-                .preferredColorScheme(.dark)
-                .tint(WatchlistTheme.accent)
+            switch modelContainerResult {
+            case .success(let container):
+                LibraryView()
+                    .preferredColorScheme(.dark)
+                    .tint(WatchlistTheme.accent)
+                    .modelContainer(container)
+            case .failure(let error):
+                LibraryStoreErrorView(error: error)
+                    .preferredColorScheme(.dark)
+            }
         }
-        .modelContainer(sharedModelContainer)
+    }
+}
+
+private struct LibraryStoreErrorView: View {
+    let error: Error
+
+    var body: some View {
+        ContentUnavailableView {
+            Label("Couldn't Open Library", systemImage: "externaldrive.badge.exclamationmark")
+        } description: {
+            Text("The saved library is still on this Mac. Slate left it untouched.\n\n\(error.localizedDescription)")
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(WatchlistTheme.background)
     }
 }
