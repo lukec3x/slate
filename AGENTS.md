@@ -76,8 +76,7 @@ the watched flag.
 - `Slate/SlateApp.swift` — app entry and SwiftData container
 - `Slate/Title.swift` — watchlist model
 - `Slate/LibraryView.swift` — dark poster grid with All, Watching, Want, and Watched chips
-- `Slate/SearchView.swift` — poster search in a popup. The add button opens it, and the A key does the same when a text field is not focused.
-- On the watchlist, F opens a popup that searches only titles already saved in the selected category.
+- `Slate/SearchView.swift` — one popup to find a saved title and add from TMDB. `/` opens it from the watchlist when a text field is not focused.
 - `Slate/TitleDetailView.swift` — status and series progress
 - `Slate/Catalog.swift` — TMDB client and response decoding
 - `SlateTests/` — unit tests, no network
