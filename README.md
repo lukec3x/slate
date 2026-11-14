@@ -37,7 +37,7 @@ Open `Slate.xcodeproj` and run the `Slate` scheme. Pick an iOS, macOS, or vision
 - `Slate/SlateApp.swift` — app entry and SwiftData container
 - `Slate/Title.swift` — watchlist model
 - `Slate/LibraryView.swift` — dark poster grid of the watchlist
-- `Slate/SearchView.swift` — TMDB search
+- `Slate/SearchView.swift` — search saved titles and TMDB
 - `Slate/TitleDetailView.swift` — status and, for a series, the episode where you stopped
 - `Slate/Catalog.swift` — TMDB client
 - `SlateTests/` — unit tests that do not call the network
