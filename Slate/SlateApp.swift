@@ -31,6 +31,9 @@ struct SlateApp: App {
                     .preferredColorScheme(.dark)
             }
         }
+        #if os(macOS)
+        .defaultSize(width: 960, height: 680)
+        #endif
     }
 }
 

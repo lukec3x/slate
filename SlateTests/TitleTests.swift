@@ -30,6 +30,26 @@ struct TitleTests {
         #expect(series.progressLabel == "S2 E5")
     }
 
+    @Test func catalogFactsStayOnTheTitleWithoutMovingIt() {
+        let series = Title(tmdbID: 1396, kind: .series, name: "Breaking Bad", year: 2008, posterPath: nil)
+        series.setProgress(season: 2, episode: 5, name: "Breakage")
+        let updated = series.updatedAt
+
+        series.rememberCatalog(
+            overview: "A chemistry teacher cooks.",
+            backdropPath: "/backdrop.jpg",
+            genres: ["Drama", "Crime"]
+        )
+
+        #expect(series.overview == "A chemistry teacher cooks.")
+        #expect(series.backdropPath == "/backdrop.jpg")
+        #expect(series.genres == ["Drama", "Crime"])
+        #expect(series.seasonNumber == 2)
+        #expect(series.episodeNumber == 5)
+        #expect(series.episodeName == "Breakage")
+        #expect(series.updatedAt == updated)
+    }
+
     @Test func theSameCatalogTitleIsADuplicate() {
         let existing = Title(tmdbID: 1396, kind: .series, name: "Breaking Bad", year: 2008, posterPath: nil)
 

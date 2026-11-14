@@ -47,6 +47,9 @@ final class Title {
     var seasonNumber: Int?
     var episodeNumber: Int?
     var episodeName: String?
+    var overview: String? = nil
+    var backdropPath: String? = nil
+    var genres: [String] = []
     var createdAt: Date
     var updatedAt: Date
 
@@ -104,6 +107,12 @@ final class Title {
     var progressLabel: String? {
         guard kind == .series, let seasonNumber, let episodeNumber else { return nil }
         return "S\(seasonNumber) E\(episodeNumber)"
+    }
+
+    func rememberCatalog(overview: String?, backdropPath: String?, genres: [String]) {
+        self.overview = overview
+        self.backdropPath = backdropPath
+        self.genres = genres
     }
 
     func setProgress(season: Int?, episode: Int?, name: String?) {
