@@ -96,7 +96,7 @@ struct LibraryView: View {
             }
         }
         #if os(macOS)
-        .frame(minWidth: 760, minHeight: 560)
+        .frame(minWidth: 760, idealWidth: 960, minHeight: 560, idealHeight: 680)
         #endif
         .sheet(isPresented: $showingSearch, onDismiss: openPendingTitle) {
             SearchView(library: titles, category: filter, onPickSaved: openFound, onPickCatalog: add)

@@ -15,11 +15,58 @@ nonisolated struct CatalogResult: Identifiable, Equatable {
     var id: String { "\(kind.rawValue)-\(tmdbID)" }
 }
 
+nonisolated struct SeriesDetail: Equatable {
+    var overview: String?
+    var tagline: String?
+    var backdropPath: String?
+    var genres: [String]
+    var status: String?
+    var firstAirDate: String?
+    var lastAirDate: String?
+    var episodeRuntimes: [Int]
+    var numberOfSeasons: Int?
+    var numberOfEpisodes: Int?
+    var networks: [String]
+    var originCountries: [String]
+    var originalLanguage: String?
+    var voteAverage: Double?
+    var voteCount: Int?
+    var creators: [String]
+    var nextEpisode: AiredEpisode?
+    var lastEpisode: AiredEpisode?
+    var seasons: [TMDBSeason]
+}
+
+nonisolated struct AiredEpisode: Equatable {
+    var name: String
+    var seasonNumber: Int
+    var episodeNumber: Int
+    var airDate: String?
+}
+
+nonisolated struct MovieDetail: Equatable {
+    var overview: String?
+    var tagline: String?
+    var backdropPath: String?
+    var genres: [String]
+    var releaseDate: String?
+    var runtime: Int?
+    var status: String?
+    var voteAverage: Double?
+    var voteCount: Int?
+    var countries: [String]
+    var originalLanguage: String?
+    var collectionName: String?
+}
+
 nonisolated struct TMDBSeason: Identifiable, Equatable, Decodable {
     var id: Int
     var seasonNumber: Int
     var name: String
     var episodeCount: Int
+    var airDate: String?
+    var posterPath: String?
+    var overview: String?
 }
 
 nonisolated struct TMDBEpisode: Identifiable, Equatable, Decodable {
@@ -27,6 +74,10 @@ nonisolated struct TMDBEpisode: Identifiable, Equatable, Decodable {
     var episodeNumber: Int
     var name: String
     var seasonNumber: Int
+    var stillPath: String?
+    var overview: String?
+    var airDate: String?
+    var runtime: Int?
 }
 
 nonisolated enum TMDBError: Error {
@@ -35,9 +86,15 @@ nonisolated enum TMDBError: Error {
 }
 
 nonisolated enum TMDBImage {
-    static func url(path: String?) -> URL? {
+    nonisolated enum Width: String {
+        case poster = "w185"
+        case backdrop = "w780"
+        case still = "w300"
+    }
+
+    static func url(path: String?, width: Width = .poster) -> URL? {
         guard let path, !path.isEmpty else { return nil }
-        return URL(string: "https://image.tmdb.org/t/p/w185\(path)")
+        return URL(string: "https://image.tmdb.org/t/p/\(width.rawValue)\(path)")
     }
 }
 
@@ -47,14 +104,106 @@ nonisolated enum CatalogDecoder {
         return response.results.compactMap(CatalogResult.init(item:))
     }
 
-    static func seasons(from data: Data) throws -> [TMDBSeason] {
-        let response = try decoder.decode(TMDBSeriesDetails.self, from: data)
-        return response.seasons.sorted { $0.seasonNumber < $1.seasonNumber }
+    static func series(from data: Data) throws -> SeriesDetail {
+        let payload = try decoder.decode(TMDBSeriesPayload.self, from: data)
+        let seasons = (payload.seasons ?? []).map(season).sorted { $0.seasonNumber < $1.seasonNumber }
+        return SeriesDetail(
+            overview: text(payload.overview),
+            tagline: text(payload.tagline),
+            backdropPath: text(payload.backdropPath),
+            genres: names(payload.genres),
+            status: text(payload.status),
+            firstAirDate: text(payload.firstAirDate),
+            lastAirDate: text(payload.lastAirDate),
+            episodeRuntimes: payload.episodeRunTime ?? [],
+            numberOfSeasons: payload.numberOfSeasons,
+            numberOfEpisodes: payload.numberOfEpisodes,
+            networks: names(payload.networks),
+            originCountries: texts(payload.originCountry),
+            originalLanguage: text(payload.originalLanguage),
+            voteAverage: payload.voteAverage,
+            voteCount: payload.voteCount,
+            creators: names(payload.createdBy),
+            nextEpisode: aired(payload.nextEpisodeToAir),
+            lastEpisode: aired(payload.lastEpisodeToAir),
+            seasons: seasons
+        )
+    }
+
+    static func movie(from data: Data) throws -> MovieDetail {
+        let payload = try decoder.decode(TMDBMoviePayload.self, from: data)
+        let namedCountries = names(payload.productionCountries)
+        return MovieDetail(
+            overview: text(payload.overview),
+            tagline: text(payload.tagline),
+            backdropPath: text(payload.backdropPath),
+            genres: names(payload.genres),
+            releaseDate: text(payload.releaseDate),
+            runtime: payload.runtime,
+            status: text(payload.status),
+            voteAverage: payload.voteAverage,
+            voteCount: payload.voteCount,
+            countries: namedCountries.isEmpty ? texts(payload.originCountry) : namedCountries,
+            originalLanguage: text(payload.originalLanguage),
+            collectionName: text(payload.belongsToCollection?.name)
+        )
     }
 
     static func episodes(from data: Data) throws -> [TMDBEpisode] {
         let response = try decoder.decode(TMDBSeasonDetails.self, from: data)
-        return response.episodes.sorted { $0.episodeNumber < $1.episodeNumber }
+        return response.episodes.map(episode).sorted { $0.episodeNumber < $1.episodeNumber }
+    }
+
+    private static func season(_ season: TMDBSeason) -> TMDBSeason {
+        TMDBSeason(
+            id: season.id,
+            seasonNumber: season.seasonNumber,
+            name: season.name,
+            episodeCount: season.episodeCount,
+            airDate: text(season.airDate),
+            posterPath: text(season.posterPath),
+            overview: text(season.overview)
+        )
+    }
+
+    private static func episode(_ episode: TMDBEpisode) -> TMDBEpisode {
+        TMDBEpisode(
+            id: episode.id,
+            episodeNumber: episode.episodeNumber,
+            name: episode.name,
+            seasonNumber: episode.seasonNumber,
+            stillPath: text(episode.stillPath),
+            overview: text(episode.overview),
+            airDate: text(episode.airDate),
+            runtime: episode.runtime
+        )
+    }
+
+    private static func aired(_ episode: TMDBAiredEpisode?) -> AiredEpisode? {
+        guard let episode, let seasonNumber = episode.seasonNumber, let episodeNumber = episode.episodeNumber else {
+            return nil
+        }
+        return AiredEpisode(
+            name: text(episode.name) ?? "",
+            seasonNumber: seasonNumber,
+            episodeNumber: episodeNumber,
+            airDate: text(episode.airDate)
+        )
+    }
+
+    private static func names(_ values: [TMDBName]?) -> [String] {
+        texts(values?.map(\.name))
+    }
+
+    private static func texts(_ values: [String]?) -> [String] {
+        (values ?? []).compactMap(text)
+    }
+
+    private static func text(_ value: String?) -> String? {
+        guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty else {
+            return nil
+        }
+        return trimmed
     }
 
     private static var decoder: JSONDecoder {
@@ -80,9 +229,14 @@ nonisolated struct TMDBClient {
         return try CatalogDecoder.searchResults(from: data)
     }
 
-    func seasons(seriesID: Int) async throws -> [TMDBSeason] {
+    func series(seriesID: Int) async throws -> SeriesDetail {
         let data = try await fetch(path: "tv/\(seriesID)", query: [language])
-        return try CatalogDecoder.seasons(from: data)
+        return try CatalogDecoder.series(from: data)
+    }
+
+    func movie(movieID: Int) async throws -> MovieDetail {
+        let data = try await fetch(path: "movie/\(movieID)", query: [language])
+        return try CatalogDecoder.movie(from: data)
     }
 
     func episodes(seriesID: Int, season: Int) async throws -> [TMDBEpisode] {
@@ -147,8 +301,57 @@ private nonisolated struct TMDBSearchItem: Decodable {
     var firstAirDate: String?
 }
 
-private nonisolated struct TMDBSeriesDetails: Decodable {
-    var seasons: [TMDBSeason]
+private nonisolated struct TMDBSeriesPayload: Decodable {
+    var overview: String?
+    var tagline: String?
+    var backdropPath: String?
+    var genres: [TMDBName]?
+    var status: String?
+    var firstAirDate: String?
+    var lastAirDate: String?
+    var episodeRunTime: [Int]?
+    var numberOfSeasons: Int?
+    var numberOfEpisodes: Int?
+    var networks: [TMDBName]?
+    var originCountry: [String]?
+    var originalLanguage: String?
+    var voteAverage: Double?
+    var voteCount: Int?
+    var createdBy: [TMDBName]?
+    var nextEpisodeToAir: TMDBAiredEpisode?
+    var lastEpisodeToAir: TMDBAiredEpisode?
+    var seasons: [TMDBSeason]?
+}
+
+private nonisolated struct TMDBMoviePayload: Decodable {
+    var overview: String?
+    var tagline: String?
+    var backdropPath: String?
+    var genres: [TMDBName]?
+    var releaseDate: String?
+    var runtime: Int?
+    var status: String?
+    var voteAverage: Double?
+    var voteCount: Int?
+    var productionCountries: [TMDBName]?
+    var originCountry: [String]?
+    var originalLanguage: String?
+    var belongsToCollection: TMDBCollection?
+}
+
+private nonisolated struct TMDBName: Decodable {
+    var name: String
+}
+
+private nonisolated struct TMDBCollection: Decodable {
+    var name: String?
+}
+
+private nonisolated struct TMDBAiredEpisode: Decodable {
+    var name: String?
+    var seasonNumber: Int?
+    var episodeNumber: Int?
+    var airDate: String?
 }
 
 private nonisolated struct TMDBSeasonDetails: Decodable {
